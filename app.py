@@ -35,12 +35,39 @@ APP_NAME = "MyHospital"
 # Model paths
 MODEL_PATH = "random_forest_model.pkl"
 SCALER_PATH = "scaler.pkl"
+APPENDICITIS_MODEL_PATH = "app_best_model.pkl"
 
 # Features for the model - updated to match the order in the training data
 FEATURES = [
     "age", "anaemia", "creatinine_phosphokinase", "diabetes", 
     "ejection_fraction", "high_blood_pressure", "platelets", 
     "serum_creatinine", "serum_sodium", "sex", "smoking", "time"
+]
+
+# Features for the appendicitis model - subset used in the form
+APPENDICITIS_FEATURES = [
+    "Age", "BMI", "Sex", "Migratory_Pain", "Lower_Right_Abd_Pain", 
+    "Contralateral_Rebound_Tenderness", "Coughing_Pain", "Nausea", 
+    "Loss_of_Appetite", "Body_Temperature", "WBC_Count", 
+    "Neutrophil_Percentage", "Alvarado_Score", "Paedriatic_Appendicitis_Score"
+]
+
+# All columns needed by the appendicitis model
+APPENDICITIS_ALL_COLUMNS = [
+    "Age", "BMI", "Sex", "Height", "Weight", "Length_of_Stay", "Management", 
+    "Severity", "Diagnosis_Presumptive", "Alvarado_Score", "Paedriatic_Appendicitis_Score", 
+    "Appendix_on_US", "Appendix_Diameter", "Migratory_Pain", "Lower_Right_Abd_Pain", 
+    "Contralateral_Rebound_Tenderness", "Coughing_Pain", "Nausea", "Loss_of_Appetite", 
+    "Body_Temperature", "WBC_Count", "Neutrophil_Percentage", "Segmented_Neutrophils", 
+    "Neutrophilia", "RBC_Count", "Hemoglobin", "RDW", "Thrombocyte_Count", 
+    "Ketones_in_Urine", "RBC_in_Urine", "WBC_in_Urine", "CRP", "Dysuria", 
+    "Stool", "Peritonitis", "Psoas_Sign", "Ipsilateral_Rebound_Tenderness", 
+    "US_Performed", "US_Number", "Free_Fluids", "Appendix_Wall_Layers", 
+    "Target_Sign", "Appendicolith", "Perfusion", "Perforation", 
+    "Surrounding_Tissue_Reaction", "Appendicular_Abscess", "Abscess_Location", 
+    "Pathological_Lymph_Nodes", "Lymph_Nodes_Location", "Bowel_Wall_Thickening", 
+    "Conglomerate_of_Bowel_Loops", "Ileus", "Coprostasis", "Meteorism", 
+    "Enteritis", "Gynecological_Findings"
 ]
 
 # Simulated doctor credentials - simplified
@@ -98,6 +125,54 @@ RISK_FACTORS = {
     "sex": "Men have a higher risk of heart failure than women"
 }
 
+# Valid ranges for appendicitis inputs
+APPENDICITIS_RANGES = {
+    "Age": (2, 18, "Years"),
+    "BMI": (12, 40, "kg/m²"),
+    "Sex": ("male", "female", "Gender"),
+    "Migratory_Pain": (0, 1, "Yes/No"),
+    "Lower_Right_Abd_Pain": (0, 1, "Yes/No"),
+    "Contralateral_Rebound_Tenderness": (0, 1, "Yes/No"),
+    "Coughing_Pain": (0, 1, "Yes/No"),
+    "Nausea": (0, 1, "Yes/No"),
+    "Loss_of_Appetite": (0, 1, "Yes/No"),
+    "Body_Temperature": (35.0, 41.0, "°C"),
+    "WBC_Count": (4000, 25000, "cells/μL"),
+    "Neutrophil_Percentage": (20, 95, "%"),
+    "Alvarado_Score": (0, 10, "Score"),
+    "Paedriatic_Appendicitis_Score": (0, 10, "Score")
+}
+
+# Feature descriptions for appendicitis
+APPENDICITIS_INFO = {
+    "Age": "Patient's age in years",
+    "BMI": "Body Mass Index (weight in kg / height in meters squared)",
+    "Sex": "Patient's gender (male or female)",
+    "Migratory_Pain": "Pain that moves from the umbilical region to the right lower quadrant",
+    "Lower_Right_Abd_Pain": "Pain in the right lower abdomen",
+    "Contralateral_Rebound_Tenderness": "Pain when pressing and quickly releasing the left side of the abdomen",
+    "Coughing_Pain": "Pain when coughing",
+    "Nausea": "Feeling of sickness with an inclination to vomit",
+    "Loss_of_Appetite": "Reduced desire to eat",
+    "Body_Temperature": "Body temperature in Celsius",
+    "WBC_Count": "White blood cell count",
+    "Neutrophil_Percentage": "Percentage of neutrophils in white blood cells",
+    "Alvarado_Score": "Clinical scoring system used to diagnose appendicitis (0-10)",
+    "Paedriatic_Appendicitis_Score": "Pediatric-specific scoring system for appendicitis (0-10)"
+}
+
+# Appendicitis risk factors
+APPENDICITIS_RISK_FACTORS = {
+    "Migratory_Pain": "Classic symptom of appendicitis as inflammation progresses",
+    "Lower_Right_Abd_Pain": "Direct indication of appendix inflammation",
+    "Contralateral_Rebound_Tenderness": "Indicates peritoneal irritation",
+    "WBC_Count": "Elevated white blood cell count indicates infection",
+    "Neutrophil_Percentage": "Elevated neutrophils suggest bacterial infection",
+    "Body_Temperature": "Fever indicates inflammatory response",
+    "Alvarado_Score": "Higher scores correlate with increased likelihood of appendicitis",
+    "Paedriatic_Appendicitis_Score": "Pediatric-specific score with high predictive value"
+}
+
 # Load model and scaler
 try:
     model = joblib.load(MODEL_PATH)
@@ -106,6 +181,29 @@ try:
 except FileNotFoundError as e:
     logging.error(f"Model files not found: {e}. Please run the model training script first.")
     raise
+
+# Load appendicitis model
+try:
+    appendicitis_model_dict = joblib.load(APPENDICITIS_MODEL_PATH)
+    logging.info("Appendicitis model loaded successfully")
+    # Extract the actual model from the dictionary
+    if isinstance(appendicitis_model_dict, dict):
+        appendicitis_model = appendicitis_model_dict.get('model', None)
+        if appendicitis_model is None:
+            # Try other common keys
+            for key in ['best_model', 'classifier', 'estimator']:
+                if key in appendicitis_model_dict:
+                    appendicitis_model = appendicitis_model_dict[key]
+                    break
+        logging.info(f"Extracted appendicitis model: {type(appendicitis_model)}")
+    else:
+        appendicitis_model = appendicitis_model_dict
+except FileNotFoundError as e:
+    logging.error(f"Appendicitis model file not found: {e}. Please make sure the model file exists.")
+    appendicitis_model = None
+except Exception as e:
+    logging.error(f"Error loading appendicitis model: {e}")
+    appendicitis_model = None
 
 # Generate interactive pie chart with Plotly
 def generate_pie_chart(probability):
@@ -407,8 +505,43 @@ def dashboard():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     
+    doctor = DOCTORS.get(session.get('username', ''))
+    
     return render_template('dashboard.html', 
-                           doctor_name=session.get('doctor_name', 'Doctor'))
+                           app_name=APP_NAME,
+                           doctor=doctor,
+                           prediction_features=[
+                               {
+                                   'name': 'Heart Failure Prediction',
+                                   'description': 'Predict the risk of heart failure based on patient data',
+                                   'icon': 'fa-heartbeat',
+                                   'url': url_for('predict')
+                               },
+                               {
+                                   'name': 'Pediatric Appendicitis Diagnosis',
+                                   'description': 'Assess the risk of appendicitis in pediatric patients',
+                                   'icon': 'fa-child',
+                                   'url': url_for('appendicitis')
+                               },
+                               {
+                                   'name': 'Predicting Success of Pediatric Bone Marrow Transplants',
+                                   'description': 'Coming soon',
+                                   'icon': 'fa-procedures',
+                                   'url': '#'
+                               },
+                               {
+                                   'name': 'Cervical Cancer Risk Assessment',
+                                   'description': 'Coming soon',
+                                   'icon': 'fa-venus',
+                                   'url': '#'
+                               },
+                               {
+                                   'name': 'Obesity Risk Estimation',
+                                   'description': 'Coming soon',
+                                   'icon': 'fa-weight',
+                                   'url': '#'
+                               }
+                           ])
 
 @app.route('/predict', methods=['GET', 'POST'])
 def predict():
@@ -520,6 +653,333 @@ def generate_report():
         download_name=filename,
         mimetype='application/pdf'
     )
+
+@app.route('/appendicitis', methods=['GET', 'POST'])
+def appendicitis():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
+    if appendicitis_model is None:
+        return render_template('error.html', error="Appendicitis model not loaded. Please contact the administrator.")
+    
+    prediction = None
+    probability = None
+    pie_chart = None
+    radar_chart = None
+    error = None
+    form_values = {feature: "" for feature in APPENDICITIS_FEATURES}
+    
+    if request.method == 'POST':
+        try:
+            # Process form data
+            input_data = {}
+            
+            # Handle binary features (checkboxes)
+            binary_features = ['Migratory_Pain', 'Lower_Right_Abd_Pain', 'Contralateral_Rebound_Tenderness', 
+                              'Coughing_Pain', 'Nausea', 'Loss_of_Appetite']
+            for feature in binary_features:
+                # If checkbox is checked, value will be in request.form, otherwise it's not present
+                input_data[feature] = 1 if feature in request.form else 0
+            
+            # Handle sex (special case)
+            input_data['Sex'] = request.form.get('Sex')
+            
+            # Handle numeric features
+            numeric_features = [f for f in APPENDICITIS_FEATURES if f not in binary_features and f != 'Sex']
+            for feature in numeric_features:
+                value = request.form.get(feature)
+                if not value:
+                    raise ValueError(f"Missing value for {feature}")
+                
+                value = float(value)
+                if feature in APPENDICITIS_RANGES:
+                    min_val, max_val, _ = APPENDICITIS_RANGES[feature]
+                    if value < min_val or value > max_val:
+                        raise ValueError(f"{feature.replace('_', ' ').title()} must be between {min_val} and {max_val}")
+                input_data[feature] = value
+            
+            # Store form values for redisplay if needed
+            form_values = input_data
+            
+            # Create DataFrame for prediction
+            input_df = pd.DataFrame([input_data])
+            
+            # Add missing columns with default values
+            for col in APPENDICITIS_ALL_COLUMNS:
+                if col not in input_df.columns:
+                    if col in ['Height', 'Weight', 'Length_of_Stay', 'WBC_Count', 
+                              'Neutrophil_Percentage', 'Segmented_Neutrophils', 
+                              'RBC_Count', 'Hemoglobin', 'RDW', 'Thrombocyte_Count', 
+                              'CRP', 'Appendix_Diameter']:
+                        # Numeric columns get 0 as default
+                        input_df[col] = 0
+                    elif col in ['Sex']:
+                        # Skip Sex as it's already handled
+                        continue
+                    elif col in ['Diagnosis_Presumptive']:
+                        # This is what we're predicting, so use a neutral value
+                        input_df[col] = 'unknown'
+                    else:
+                        # Binary or categorical columns get 'no' or 0 as default
+                        input_df[col] = 0
+            
+            # Make sure columns are in the right order
+            input_df = input_df[APPENDICITIS_ALL_COLUMNS]
+            
+            # Make prediction
+            try:
+                if hasattr(appendicitis_model, 'predict'):
+                    # If we have a direct model object
+                    prediction = int(appendicitis_model.predict(input_df)[0])
+                    probability = float(appendicitis_model.predict_proba(input_df)[0, 1])
+                elif isinstance(appendicitis_model_dict, dict) and 'predict_function' in appendicitis_model_dict:
+                    # If we have a dictionary with a predict_function
+                    predictions, probabilities = appendicitis_model_dict['predict_function'](input_df)
+                    prediction = int(predictions[0])
+                    probability = float(probabilities[0][1] if len(probabilities[0]) > 1 else probabilities[0])
+                else:
+                    raise ValueError("Could not find a valid prediction method in the model")
+                
+                logging.info(f"Prediction made successfully: {prediction}, Probability: {probability}")
+            except Exception as e:
+                logging.error(f"Error during prediction: {str(e)}")
+                raise ValueError(f"Error making prediction: {str(e)}")
+            
+            # Generate charts
+            pie_chart = generate_appendicitis_pie_chart(probability)
+            radar_chart = generate_appendicitis_radar_chart(input_data)
+            
+            # Store prediction in session for PDF generation
+            session['last_appendicitis_prediction'] = {
+                'input_data': input_data,
+                'prediction': prediction,
+                'probability': probability
+            }
+            
+            logging.info(f"Appendicitis prediction made: {prediction}, Probability: {probability}")
+            
+        except Exception as e:
+            logging.error(f"Error during appendicitis prediction: {str(e)}")
+            error = str(e)
+    
+    return render_template('appendicitis.html', 
+                           features=APPENDICITIS_FEATURES,
+                           feature_info=APPENDICITIS_INFO,
+                           valid_ranges=APPENDICITIS_RANGES,
+                           form_values=form_values,
+                           prediction=prediction,
+                           probability=probability,
+                           pie_chart=pie_chart,
+                           radar_chart=radar_chart,
+                           error=error,
+                           risk_factors=APPENDICITIS_RISK_FACTORS)
+
+# Generate appendicitis pie chart
+def generate_appendicitis_pie_chart(probability):
+    fig = go.Figure(data=[go.Pie(
+        labels=['Appendicitis', 'No Appendicitis'],
+        values=[probability, 1-probability],
+        hole=.4,
+        marker_colors=['#FF5252', '#4CAF50'],
+        textinfo='percent',
+        textfont_size=14,
+        textposition='inside'
+    )])
+    
+    fig.update_layout(
+        title_text="Appendicitis Risk Assessment",
+        annotations=[dict(text=f"{probability*100:.1f}%", x=0.5, y=0.5, font_size=20, showarrow=False)],
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
+        margin=dict(l=20, r=20, t=40, b=20),
+        height=300,
+    )
+    
+    return fig.to_html(full_html=False, include_plotlyjs='cdn')
+
+# Generate appendicitis radar chart
+def generate_appendicitis_radar_chart(patient_data):
+    # Select key features for radar chart
+    radar_features = ['Age', 'BMI', 'WBC_Count', 'Neutrophil_Percentage', 
+                      'Alvarado_Score', 'Paedriatic_Appendicitis_Score']
+    
+    # Normalize values for radar chart (0-1 scale)
+    normalized_values = []
+    for feature in radar_features:
+        if feature in patient_data:
+            value = patient_data[feature]
+            if feature in APPENDICITIS_RANGES:
+                min_val, max_val, _ = APPENDICITIS_RANGES[feature]
+                normalized = (value - min_val) / (max_val - min_val)
+                normalized_values.append(normalized)
+            else:
+                normalized_values.append(0.5)  # Default if no range
+    
+    # Create radar chart
+    fig = go.Figure()
+    
+    fig.add_trace(go.Scatterpolar(
+        r=normalized_values,
+        theta=radar_features,
+        fill='toself',
+        name='Patient Data',
+        line_color='rgb(31, 119, 180)'
+    ))
+    
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(
+                visible=True,
+                range=[0, 1]
+            )
+        ),
+        title="Patient Metrics",
+        showlegend=False,
+        height=350,
+        margin=dict(l=80, r=80, t=40, b=40)
+    )
+    
+    return fig.to_html(full_html=False, include_plotlyjs='cdn')
+
+@app.route('/generate_appendicitis_report')
+def generate_appendicitis_report():
+    if not session.get('logged_in') or not session.get('last_appendicitis_prediction'):
+        return redirect(url_for('login'))
+    
+    # Get prediction data from session
+    prediction_data = session.get('last_appendicitis_prediction')
+    patient_data = prediction_data.get('input_data', {})
+    prediction = prediction_data.get('prediction', 0)
+    probability = prediction_data.get('probability', 0)
+    
+    # Create PDF report
+    pdf_output = create_appendicitis_pdf_report(patient_data, prediction, probability)
+    
+    # Create timestamp for filename
+    timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    filename = f"appendicitis_risk_report_{timestamp}.pdf"
+    
+    # Send the PDF as a downloadable file
+    return send_file(
+        pdf_output,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/pdf'
+    )
+
+def create_appendicitis_pdf_report(patient_data, prediction, probability):
+    # Create a timestamp for the report
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Generate pie chart for PDF
+    plt.figure(figsize=(6, 6))
+    labels = ['Appendicitis', 'No Appendicitis']
+    sizes = [probability * 100, (1 - probability) * 100]
+    colors = ['#FF5252', '#4CAF50']
+    explode = (0.1, 0)
+    
+    plt.pie(sizes, explode=explode, labels=labels, colors=colors,
+            autopct='%1.1f%%', shadow=True, startangle=90)
+    plt.axis('equal')
+    plt.title('Appendicitis Risk Assessment')
+    
+    # Save pie chart to base64 for embedding in PDF
+    pie_chart_buffer = io.BytesIO()
+    plt.savefig(pie_chart_buffer, format='png')
+    plt.close()
+    pie_chart_base64 = base64.b64encode(pie_chart_buffer.getvalue()).decode('utf-8')
+    
+    # Create HTML content for the PDF
+    html_content = f"""
+    <html>
+    <head>
+        <style>
+            body {{ font-family: Arial, sans-serif; margin: 20px; }}
+            h1, h2 {{ color: #2c3e50; }}
+            .header {{ text-align: center; margin-bottom: 30px; }}
+            .risk-high {{ color: #FF5252; }}
+            .risk-low {{ color: #4CAF50; }}
+            table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+            th, td {{ padding: 10px; border: 1px solid #ddd; text-align: left; }}
+            th {{ background-color: #f2f2f2; }}
+            .footer {{ margin-top: 50px; font-size: 12px; color: #777; text-align: center; }}
+            .chart-container {{ text-align: center; margin: 20px 0; }}
+            .risk-factors {{ margin-top: 30px; }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>Pediatric Appendicitis Risk Assessment Report</h1>
+            <p>Generated on: {timestamp}</p>
+        </div>
+        
+        <h2>Risk Assessment Result</h2>
+        <p>Based on the provided patient data, the risk of appendicitis is:
+            <strong class="{'risk-high' if prediction == 1 else 'risk-low'}">
+                {f"High ({probability*100:.1f}%)" if prediction == 1 else f"Low ({(1-probability)*100:.1f}%)"}
+            </strong>
+        </p>
+        
+        <div class="chart-container">
+            <img src="data:image/png;base64,{pie_chart_base64}" alt="Risk Assessment Chart" width="400">
+        </div>
+        
+        <h2>Patient Data</h2>
+        <table>
+            <tr>
+                <th>Feature</th>
+                <th>Value</th>
+                <th>Description</th>
+            </tr>
+    """
+    
+    # Add patient data to the table
+    for feature, value in patient_data.items():
+        if feature in APPENDICITIS_INFO:
+            description = APPENDICITIS_INFO[feature]
+            
+            # Format binary values
+            if feature in ['Migratory_Pain', 'Lower_Right_Abd_Pain', 'Contralateral_Rebound_Tenderness', 
+                          'Coughing_Pain', 'Nausea', 'Loss_of_Appetite']:
+                value = "Yes" if value == 1 else "No"
+                
+            html_content += f"""
+            <tr>
+                <td>{feature.replace('_', ' ').title()}</td>
+                <td>{value}</td>
+                <td>{description}</td>
+            </tr>
+            """
+    
+    html_content += """
+        </table>
+        
+        <div class="risk-factors">
+            <h2>Key Risk Factors for Appendicitis</h2>
+            <ul>
+    """
+    
+    # Add risk factors
+    for factor, description in APPENDICITIS_RISK_FACTORS.items():
+        html_content += f"<li><strong>{factor.replace('_', ' ').title()}:</strong> {description}</li>"
+    
+    html_content += """
+            </ul>
+        </div>
+        
+        <div class="footer">
+            <p>This report is generated by MyHospital Medical Prediction System. This is not a definitive diagnosis and should be used in conjunction with clinical judgment.</p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    # Convert HTML to PDF
+    pdf_output = io.BytesIO()
+    pisa.CreatePDF(html_content, dest=pdf_output)
+    pdf_output.seek(0)
+    
+    return pdf_output
 
 # Ensure static directory exists
 def create_static_dir():
