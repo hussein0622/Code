@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pediatric Appendicitis Diagnosis - MyHospital</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Arial', sans-serif;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .sidebar {
+            background-color: #fff;
+            border-right: 1px solid #e9ecef;
+            height: calc(100vh - 56px);
+            position: fixed;
+            top: 56px;
+            left: 0;
+            width: 250px;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s;
+            z-index: 999;
+            overflow-y: auto;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .card-header {
+            background: linear-gradient(135deg, #3498db, #2c3e50);
+            color: white;
+            border-bottom: none;
+            padding: 15px 20px;
+        }
+        .nav-link {
+            color: #495057;
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            transition: all 0.3s;
+        }
+        .nav-link:hover {
+            background-color: #e9ecef;
+        }
+        .nav-link.active {
+            background-color: #e9ecef;
+            color: #007bff;
+            font-weight: 500;
+        }
+        .form-label {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        .info-tooltip {
+            color: #6c757d;
+            cursor: pointer;
+        }
+        .prediction-card {
+            border-left: 5px solid #007bff;
+        }
+        .prediction-results {
+            display: none;
+        }
+        .risk-factors-card {
+            border-left: 5px solid #28a745;
+        }
+        .risk-factor-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .risk-factor-item:last-child {
+            border-bottom: none;
+        }
+        .risk-factor-name {
+            font-weight: 500;
+            color: #343a40;
+        }
+        .risk-factor-description {
+            color: #6c757d;
+            margin-bottom: 0;
+        }
+        .coming-soon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #dc3545;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 500;
+            z-index: 1;
+        }
+        @media (max-width: 992px) {
+            .sidebar {
+                margin-left: -250px;
+            }
+            .sidebar.active {
+                margin-left: 0;
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .main-content.active {
+                margin-left: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <button class="btn btn-dark sidebar-toggle me-2" id="sidebar-toggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-hospital me-2"></i>MyHospital
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('dashboard') }}">
+                            <i class="fas fa-home me-1"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('logout') }}">
+                            <i class="fas fa-sign-out-alt me-1"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="sidebar" id="sidebar">
+        <div class="p-3">
+            <h5 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                <span>Navigation</span>
+            </h5>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('dashboard') }}">
+                        <i class="fas fa-home me-2"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('predict') }}">
+                        <i class="fas fa-heartbeat me-2"></i> Heart Failure
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="{{ url_for('appendicitis') }}">
+                        <i class="fas fa-child me-2"></i> Pediatric Appendicitis
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="main-content" id="main-content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <h2 class="mb-4"><i class="fas fa-child me-2"></i>Pediatric Appendicitis Diagnosis</h2>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Pediatric Appendicitis</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+
+            {% if error %}
+            <div class="alert alert-danger" role="alert">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h5 class="m-0 font-weight-bold text-white">Patient Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" id="appendicitisForm">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                
+                                <div class="row">
+                                    <!-- Demographics -->
+                                    <div class="col-md-6 mb-3">
+                                        <label for="Age">Age (years)</label>
+                                        <input type="number" step="0.01" class="form-control" id="Age" name="Age" 
+                                               value="{{ form_values.Age }}" min="{{ valid_ranges.Age[0] }}" max="{{ valid_ranges.Age[1] }}" required>
+                                        <small class="form-text text-muted">{{ feature_info.Age }}</small>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="BMI">BMI (kg/m²)</label>
+                                        <input type="number" step="0.1" class="form-control" id="BMI" name="BMI" 
+                                               value="{{ form_values.BMI }}" min="{{ valid_ranges.BMI[0] }}" max="{{ valid_ranges.BMI[1] }}" required>
+                                        <small class="form-text text-muted">{{ feature_info.BMI }}</small>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="Sex">Sex</label>
+                                        <select class="form-control" id="Sex" name="Sex" required>
+                                            <option value="" {% if not form_values.Sex %}selected{% endif %}>Select...</option>
+                                            <option value="male" {% if form_values.Sex == "male" %}selected{% endif %}>Male</option>
+                                            <option value="female" {% if form_values.Sex == "female" %}selected{% endif %}>Female</option>
+                                        </select>
+                                        <small class="form-text text-muted">{{ feature_info.Sex }}</small>
+                                    </div>
+                                </div>
+
+                                <hr class="my-4">
+                                <h5 class="text-primary mb-3">Clinical Symptoms</h5>
+                                
+                                <!-- Checkboxes for binary features -->
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="Migratory_Pain" name="Migratory_Pain" 
+                                                   {% if form_values.Migratory_Pain == 1 %}checked{% endif %}>
+                                            <label class="form-check-label" for="Migratory_Pain">Migratory Pain</label>
+                                            <div><small class="form-text text-muted">{{ feature_info.Migratory_Pain }}</small></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="Lower_Right_Abd_Pain" name="Lower_Right_Abd_Pain" 
+                                                   {% if form_values.Lower_Right_Abd_Pain == 1 %}checked{% endif %}>
+                                            <label class="form-check-label" for="Lower_Right_Abd_Pain">Lower Right Abdominal Pain</label>
+                                            <div><small class="form-text text-muted">{{ feature_info.Lower_Right_Abd_Pain }}</small></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="Contralateral_Rebound_Tenderness" name="Contralateral_Rebound_Tenderness" 
+                                                   {% if form_values.Contralateral_Rebound_Tenderness == 1 %}checked{% endif %}>
+                                            <label class="form-check-label" for="Contralateral_Rebound_Tenderness">Contralateral Rebound Tenderness</label>
+                                            <div><small class="form-text text-muted">{{ feature_info.Contralateral_Rebound_Tenderness }}</small></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="Coughing_Pain" name="Coughing_Pain" 
+                                                   {% if form_values.Coughing_Pain == 1 %}checked{% endif %}>
+                                            <label class="form-check-label" for="Coughing_Pain">Coughing Pain</label>
+                                            <div><small class="form-text text-muted">{{ feature_info.Coughing_Pain }}</small></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="Nausea" name="Nausea" 
+                                                   {% if form_values.Nausea == 1 %}checked{% endif %}>
+                                            <label class="form-check-label" for="Nausea">Nausea</label>
+                                            <div><small class="form-text text-muted">{{ feature_info.Nausea }}</small></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="Loss_of_Appetite" name="Loss_of_Appetite" 
+                                                   {% if form_values.Loss_of_Appetite == 1 %}checked{% endif %}>
+                                            <label class="form-check-label" for="Loss_of_Appetite">Loss of Appetite</label>
+                                            <div><small class="form-text text-muted">{{ feature_info.Loss_of_Appetite }}</small></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <hr class="my-4">
+                                <h5 class="text-primary mb-3">Clinical Measurements</h5>
+                                
+                                <!-- Numeric inputs -->
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="Body_Temperature">Body Temperature (°C)</label>
+                                        <input type="number" step="0.1" class="form-control" id="Body_Temperature" name="Body_Temperature" 
+                                               value="{{ form_values.Body_Temperature }}" min="{{ valid_ranges.Body_Temperature[0] }}" max="{{ valid_ranges.Body_Temperature[1] }}" required>
+                                        <small class="form-text text-muted">{{ feature_info.Body_Temperature }}</small>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="WBC_Count">WBC Count (cells/μL)</label>
+                                        <input type="number" step="100" class="form-control" id="WBC_Count" name="WBC_Count" 
+                                               value="{{ form_values.WBC_Count }}" min="{{ valid_ranges.WBC_Count[0] }}" max="{{ valid_ranges.WBC_Count[1] }}" required>
+                                        <small class="form-text text-muted">{{ feature_info.WBC_Count }}</small>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="Neutrophil_Percentage">Neutrophil Percentage (%)</label>
+                                        <input type="number" step="0.1" class="form-control" id="Neutrophil_Percentage" name="Neutrophil_Percentage" 
+                                               value="{{ form_values.Neutrophil_Percentage }}" min="{{ valid_ranges.Neutrophil_Percentage[0] }}" max="{{ valid_ranges.Neutrophil_Percentage[1] }}" required>
+                                        <small class="form-text text-muted">{{ feature_info.Neutrophil_Percentage }}</small>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="Alvarado_Score">Alvarado Score (0-10)</label>
+                                        <input type="number" step="1" class="form-control" id="Alvarado_Score" name="Alvarado_Score" 
+                                               value="{{ form_values.Alvarado_Score }}" min="{{ valid_ranges.Alvarado_Score[0] }}" max="{{ valid_ranges.Alvarado_Score[1] }}" required>
+                                        <small class="form-text text-muted">{{ feature_info.Alvarado_Score }}</small>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="Paedriatic_Appendicitis_Score">Pediatric Appendicitis Score (0-10)</label>
+                                        <input type="number" step="1" class="form-control" id="Paedriatic_Appendicitis_Score" name="Paedriatic_Appendicitis_Score" 
+                                               value="{{ form_values.Paedriatic_Appendicitis_Score }}" min="{{ valid_ranges.Paedriatic_Appendicitis_Score[0] }}" max="{{ valid_ranges.Paedriatic_Appendicitis_Score[1] }}" required>
+                                        <small class="form-text text-muted">{{ feature_info.Paedriatic_Appendicitis_Score }}</small>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4">
+                                    <button type="submit" class="btn btn-primary btn-lg btn-block">Predict Appendicitis Risk</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    {% if prediction is not none %}
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h5 class="m-0 font-weight-bold text-white">Prediction Results</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="text-center mb-4">
+                                <h2 class="mb-3">Appendicitis Risk Assessment</h2>
+                                {% if prediction == 1 %}
+                                <div class="alert alert-danger" role="alert">
+                                    <h4 class="alert-heading">High Risk of Appendicitis</h4>
+                                    <p>The model predicts a {{ "%.1f"|format(probability*100) }}% probability of appendicitis.</p>
+                                </div>
+                                {% else %}
+                                <div class="alert alert-success" role="alert">
+                                    <h4 class="alert-heading">Low Risk of Appendicitis</h4>
+                                    <p>The model predicts a {{ "%.1f"|format((1-probability)*100) }}% probability of no appendicitis.</p>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-4">
+                                {{ pie_chart|safe }}
+                            </div>
+
+                            <div class="mb-4">
+                                {{ radar_chart|safe }}
+                            </div>
+
+                            <div class="card mb-4">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-primary">Key Risk Factors</h6>
+                                </div>
+                                <div class="card-body">
+                                    <ul class="list-group">
+                                        {% for factor, description in risk_factors.items() %}
+                                        <li class="list-group-item">
+                                            <strong>{{ factor|replace('_', ' ')|title }}:</strong> {{ description }}
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="text-center mt-4">
+                                <a href="{{ url_for('generate_appendicitis_report') }}" class="btn btn-success btn-lg mr-3">
+                                    <i class="fas fa-file-pdf mr-2"></i> Generate PDF Report
+                                </a>
+                                <a href="{{ url_for('appendicitis') }}" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-plus mr-2"></i> New Prediction
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h5 class="m-0 font-weight-bold text-white">About Pediatric Appendicitis</h5>
+                        </div>
+                        <div class="card-body">
+                            <p>Appendicitis is the most common surgical emergency in children. Early diagnosis is crucial to prevent complications such as perforation and peritonitis.</p>
+                            
+                            <h5 class="mt-4 mb-3 text-primary">Key Symptoms and Signs</h5>
+                            <ul>
+                                <li><strong>Migratory Pain:</strong> Pain that starts around the navel and shifts to the lower right abdomen</li>
+                                <li><strong>Right Lower Quadrant Pain:</strong> Pain and tenderness in the right lower abdomen</li>
+                                <li><strong>Rebound Tenderness:</strong> Pain when pressure is released from the abdomen</li>
+                                <li><strong>Nausea and Vomiting:</strong> Often follows the onset of abdominal pain</li>
+                                <li><strong>Loss of Appetite:</strong> Reduced desire to eat</li>
+                                <li><strong>Fever:</strong> Usually low-grade (37.2-38°C)</li>
+                            </ul>
+                            
+                            <h5 class="mt-4 mb-3 text-primary">Laboratory Findings</h5>
+                            <ul>
+                                <li><strong>Elevated White Blood Cell Count:</strong> Usually >10,000 cells/μL</li>
+                                <li><strong>Increased Neutrophil Percentage:</strong> Often >75%</li>
+                            </ul>
+                            
+                            <h5 class="mt-4 mb-3 text-primary">Clinical Scoring Systems</h5>
+                            <p>Two common scoring systems are used to assess the likelihood of appendicitis in children:</p>
+                            <ul>
+                                <li><strong>Alvarado Score:</strong> Includes migration of pain, anorexia, nausea/vomiting, tenderness in right lower quadrant, rebound pain, elevated temperature, leukocytosis, and shift of white blood cell count to the left</li>
+                                <li><strong>Pediatric Appendicitis Score (PAS):</strong> Similar to Alvarado but modified for children</li>
+                            </ul>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+
+        // Sidebar toggle functionality
+        document.getElementById('sidebar-toggle').addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('active');
+            document.getElementById('main-content').classList.toggle('active');
+        });
+    </script>
+</body>
+</html>
