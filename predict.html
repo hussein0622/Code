@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heart Failure Prediction - MyHospital</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Arial', sans-serif;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .sidebar {
+            background-color: #fff;
+            border-right: 1px solid #e9ecef;
+            height: calc(100vh - 56px);
+            position: fixed;
+            top: 56px;
+            left: 0;
+            width: 250px;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s;
+            z-index: 999;
+            overflow-y: auto;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .card-header {
+            background: linear-gradient(135deg, #3498db, #2c3e50);
+            color: white;
+            border-bottom: none;
+            padding: 15px 20px;
+        }
+        .nav-link {
+            color: #495057;
+            padding: 12px 20px;
+            border-left: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        .nav-link:hover, .nav-link.active {
+            background-color: #f8f9fa;
+            border-left: 3px solid #3498db;
+            color: #3498db;
+        }
+        .nav-link i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+        .form-label {
+            font-weight: 500;
+            color: #495057;
+        }
+        .form-control:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+        }
+        .btn-predict {
+            background: linear-gradient(135deg, #3498db, #2c3e50);
+            border: none;
+            padding: 12px 25px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .btn-predict:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        .prediction-results {
+            display: none;
+            animation: fadeIn 0.8s ease-in-out;
+        }
+        .risk-high {
+            color: #FF5252;
+            font-weight: bold;
+        }
+        .risk-low {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .info-tooltip {
+            color: #3498db;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        .sidebar-toggle {
+            display: none;
+        }
+        .chart-container {
+            min-height: 400px;
+            margin-bottom: 20px;
+        }
+        .risk-factor-item {
+            padding: 10px;
+            border-left: 3px solid #3498db;
+            margin-bottom: 10px;
+            background-color: #f8f9fa;
+            border-radius: 0 5px 5px 0;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                margin-left: -250px;
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .sidebar.active {
+                margin-left: 0;
+            }
+            .main-content.active {
+                margin-left: 250px;
+            }
+            .sidebar-toggle {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <button class="btn btn-dark sidebar-toggle me-2" id="sidebar-toggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-hospital me-2"></i>MyHospital
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user me-1"></i> User
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>Profile</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="sidebar" id="sidebar">
+        <div class="pt-4">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('dashboard') }}">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="{{ url_for('predict') }}">
+                        <i class="fas fa-heartbeat"></i> Heart Failure
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-child"></i> Pediatric Appendicitis
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-procedures"></i> Bone Marrow Transplants
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-venus"></i> Cervical Cancer
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-weight"></i> Obesity Risk
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="main-content" id="main-content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <h2 class="mb-4"><i class="fas fa-heartbeat me-2"></i>Heart Failure Risk Prediction</h2>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Heart Failure Prediction</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+
+            {% if error %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>{{ error }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endif %}
+
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-user me-2"></i>Patient Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="age" class="form-label">Age
+                                            <i class="fas fa-info-circle info-tooltip" data-bs-toggle="tooltip" title="{{ feature_info['age'] }}"></i>
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="age" name="age" 
+                                                   min="{{ valid_ranges['age'][0] }}" max="{{ valid_ranges['age'][1] }}" 
+                                                   value="{{ form_values['age'] }}" required>
+                                            <span class="input-group-text">{{ valid_ranges['age'][2] }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Gender
+                                            <i class="fas fa-info-circle info-tooltip" data-bs-toggle="tooltip" title="{{ feature_info['sex'] }}"></i>
+                                        </label>
+                                        <div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="radio" name="sex" id="sex_female" value="0" {% if form_values['sex'] == 0 %}checked{% endif %} required>
+                                                <label class="form-check-label" for="sex_female">Female</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="radio" name="sex" id="sex_male" value="1" {% if form_values['sex'] == 1 %}checked{% endif %}>
+                                                <label class="form-check-label" for="sex_male">Male</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="ejection_fraction" class="form-label">Ejection Fraction
+                                            <i class="fas fa-info-circle info-tooltip" data-bs-toggle="tooltip" title="{{ feature_info['ejection_fraction'] }}"></i>
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="ejection_fraction" name="ejection_fraction" 
+                                                   min="{{ valid_ranges['ejection_fraction'][0] }}" max="{{ valid_ranges['ejection_fraction'][1] }}" 
+                                                   value="{{ form_values['ejection_fraction'] }}" required>
+                                            <span class="input-group-text">{{ valid_ranges['ejection_fraction'][2] }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="serum_creatinine" class="form-label">Serum Creatinine
+                                            <i class="fas fa-info-circle info-tooltip" data-bs-toggle="tooltip" title="{{ feature_info['serum_creatinine'] }}"></i>
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="number" step="0.1" class="form-control" id="serum_creatinine" name="serum_creatinine" 
+                                                   min="{{ valid_ranges['serum_creatinine'][0] }}" max="{{ valid_ranges['serum_creatinine'][1] }}" 
+                                                   value="{{ form_values['serum_creatinine'] }}" required>
+                                            <span class="input-group-text">{{ valid_ranges['serum_creatinine'][2] }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="serum_sodium" class="form-label">Serum Sodium
+                                            <i class="fas fa-info-circle info-tooltip" data-bs-toggle="tooltip" title="{{ feature_info['serum_sodium'] }}"></i>
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="serum_sodium" name="serum_sodium" 
+                                                   min="{{ valid_ranges['serum_sodium'][0] }}" max="{{ valid_ranges['serum_sodium'][1] }}" 
+                                                   value="{{ form_values['serum_sodium'] }}" required>
+                                            <span class="input-group-text">{{ valid_ranges['serum_sodium'][2] }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="creatinine_phosphokinase" class="form-label">CPK
+                                            <i class="fas fa-info-circle info-tooltip" data-bs-toggle="tooltip" title="{{ feature_info['creatinine_phosphokinase'] }}"></i>
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="creatinine_phosphokinase" name="creatinine_phosphokinase" 
+                                                   min="{{ valid_ranges['creatinine_phosphokinase'][0] }}" max="{{ valid_ranges['creatinine_phosphokinase'][1] }}" 
+                                                   value="{{ form_values['creatinine_phosphokinase'] }}" required>
+                                            <span class="input-group-text">{{ valid_ranges['creatinine_phosphokinase'][2] }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="platelets" class="form-label">Platelets
+                                            <i class="fas fa-info-circle info-tooltip" data-bs-toggle="tooltip" title="{{ feature_info['platelets'] }}"></i>
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="platelets" name="platelets" 
+                                                   min="{{ valid_ranges['platelets'][0] }}" max="{{ valid_ranges['platelets'][1] }}" 
+                                                   value="{{ form_values['platelets'] }}" required>
+                                            <span class="input-group-text">{{ valid_ranges['platelets'][2] }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="time" class="form-label">Follow-up Period
+                                            <i class="fas fa-info-circle info-tooltip" data-bs-toggle="tooltip" title="{{ feature_info['time'] }}"></i>
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="time" name="time" 
+                                                   min="{{ valid_ranges['time'][0] }}" max="{{ valid_ranges['time'][1] }}" 
+                                                   value="{{ form_values['time'] }}" required>
+                                            <span class="input-group-text">{{ valid_ranges['time'][2] }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row mt-3">
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="anaemia" name="anaemia" {% if form_values['anaemia'] == 1 %}checked{% endif %}>
+                                            <label class="form-check-label" for="anaemia">
+                                                Anaemia
+                                                <i class="fas fa-info-circle info-tooltip" data-bs-toggle="tooltip" title="{{ feature_info['anaemia'] }}"></i>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="diabetes" name="diabetes" {% if form_values['diabetes'] == 1 %}checked{% endif %}>
+                                            <label class="form-check-label" for="diabetes">
+                                                Diabetes
+                                                <i class="fas fa-info-circle info-tooltip" data-bs-toggle="tooltip" title="{{ feature_info['diabetes'] }}"></i>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="high_blood_pressure" name="high_blood_pressure" {% if form_values['high_blood_pressure'] == 1 %}checked{% endif %}>
+                                            <label class="form-check-label" for="high_blood_pressure">
+                                                High Blood Pressure
+                                                <i class="fas fa-info-circle info-tooltip" data-bs-toggle="tooltip" title="{{ feature_info['high_blood_pressure'] }}"></i>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="smoking" name="smoking" {% if form_values['smoking'] == 1 %}checked{% endif %}>
+                                            <label class="form-check-label" for="smoking">
+                                                Smoking
+                                                <i class="fas fa-info-circle info-tooltip" data-bs-toggle="tooltip" title="{{ feature_info['smoking'] }}"></i>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 text-center">
+                                    <button type="submit" class="btn btn-primary btn-predict">
+                                        <i class="fas fa-heartbeat me-2"></i>Predict Risk
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="card risk-factors-card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Risk Factors Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="risk-factors-list">
+                                {% for feature, info in risk_factors.items() %}
+                                <div class="risk-factor-item">
+                                    <h6>{{ feature.replace('_', ' ').title() }}</h6>
+                                    <p class="mb-0">{{ info }}</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if prediction is not none %}
+            <div class="prediction-results mt-4" id="prediction-results" style="display: block;">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card prediction-result">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Prediction Results</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="result-box text-center p-4 mb-4">
+                                            <h4 class="mb-3">Heart Failure Risk</h4>
+                                            <div class="risk-indicator {% if prediction == 1 %}high-risk{% else %}low-risk{% endif %}">
+                                                <span class="risk-value">{{ "%.1f"|format(probability * 100) }}%</span>
+                                            </div>
+                                            <div class="risk-label mt-3 {% if prediction == 1 %}text-danger{% else %}text-success{% endif %}">
+                                                {% if prediction == 1 %}
+                                                    <i class="fas fa-exclamation-triangle me-2"></i>High Risk
+                                                {% else %}
+                                                    <i class="fas fa-check-circle me-2"></i>Low Risk
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="d-flex justify-content-center mt-3">
+                                            <a href="{{ url_for('generate_report') }}" class="btn btn-outline-primary me-2">
+                                                <i class="fas fa-file-pdf me-2"></i>Download Report
+                                            </a>
+                                            <a href="{{ url_for('predict') }}" class="btn btn-outline-secondary">
+                                                <i class="fas fa-plus me-2"></i>New Prediction
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="chart-container">
+                                            {{ pie_chart|safe }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="chart-container">
+                                            {{ radar_chart|safe }}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="chart-container">
+                                            {{ comparison_chart|safe }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Initialize tooltips
+        document.addEventListener('DOMContentLoaded', function() {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            // Handle checkbox values
+            document.querySelectorAll('input[type="checkbox"]').forEach(function(checkbox) {
+                checkbox.addEventListener('change', function() {
+                    this.value = this.checked ? "1" : "0";
+                });
+                // Set initial value based on checked state
+                checkbox.value = checkbox.checked ? "1" : "0";
+            });
+
+            // Sidebar toggle functionality
+            document.getElementById('sidebar-toggle').addEventListener('click', function() {
+                document.getElementById('sidebar').classList.toggle('active');
+                document.getElementById('main-content').classList.toggle('active');
+            });
+
+            // Add pulse animation to prediction button
+            document.querySelector('.btn-predict').classList.add('pulse-animation');
+        });
+    </script>
+</body>
+</html>

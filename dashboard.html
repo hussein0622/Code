@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - MyHospital</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Arial', sans-serif;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .sidebar {
+            background-color: #fff;
+            border-right: 1px solid #e9ecef;
+            height: calc(100vh - 56px);
+            position: fixed;
+            top: 56px;
+            left: 0;
+            width: 250px;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s;
+            z-index: 999;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .card-header {
+            background: linear-gradient(135deg, #3498db, #2c3e50);
+            color: white;
+            border-bottom: none;
+            padding: 15px 20px;
+        }
+        .nav-link {
+            color: #495057;
+            padding: 12px 20px;
+            border-left: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        .nav-link:hover, .nav-link.active {
+            background-color: #f8f9fa;
+            border-left: 3px solid #3498db;
+            color: #3498db;
+        }
+        .nav-link i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+        .welcome-section {
+            background: linear-gradient(rgba(44, 62, 80, 0.8), rgba(52, 152, 219, 0.8)), url('https://images.unsplash.com/photo-1576091160550-2173dba999ef?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80');
+            background-size: cover;
+            background-position: center;
+            color: white;
+            padding: 40px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            animation: fadeIn 1s ease-in-out;
+        }
+        .btn-predict {
+            background: linear-gradient(135deg, #3498db, #2c3e50);
+            border: none;
+            padding: 12px 25px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .btn-predict:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        .sidebar-toggle {
+            display: none;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .prediction-card {
+            height: 100%;
+            transition: all 0.3s ease;
+        }
+        .prediction-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+        }
+        .prediction-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: #3498db;
+        }
+        .prediction-card .card-body {
+            text-align: center;
+            padding: 30px 20px;
+        }
+        .prediction-card .card-footer {
+            background-color: transparent;
+            border-top: none;
+            text-align: center;
+            padding-bottom: 25px;
+        }
+        .coming-soon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #e74c3c;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                margin-left: -250px;
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .sidebar.active {
+                margin-left: 0;
+            }
+            .main-content.active {
+                margin-left: 250px;
+            }
+            .sidebar-toggle {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <button class="btn btn-dark sidebar-toggle me-2" id="sidebar-toggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-hospital me-2"></i>MyHospital
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user me-1"></i> {{ doctor_name }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>Profile</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="sidebar" id="sidebar">
+        <div class="pt-4">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link active" href="{{ url_for('dashboard') }}">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('predict') }}">
+                        <i class="fas fa-heartbeat"></i> Heart Failure
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-child"></i> Pediatric Appendicitis
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-procedures"></i> Bone Marrow Transplants
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-venus"></i> Cervical Cancer
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-weight"></i> Obesity Risk
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-chart-line"></i> Analytics
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-cog"></i> Settings
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="main-content" id="main-content">
+        <div class="welcome-section">
+            <h2>Welcome to MyHospital</h2>
+            <p>Medical Prediction System for Healthcare Professionals</p>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Disease Prediction Tools</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>MyHospital provides advanced prediction tools to help doctors assess patient risk for various diseases. Select one of the prediction tools below to get started.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card prediction-card">
+                    <div class="card-body">
+                        <div class="prediction-icon">
+                            <i class="fas fa-heartbeat"></i>
+                        </div>
+                        <h4>Heart Failure</h4>
+                        <p>Predict heart failure risk based on clinical indicators and patient history.</p>
+                    </div>
+                    <div class="card-footer">
+                        <a href="{{ url_for('predict') }}" class="btn btn-primary btn-predict">
+                            <i class="fas fa-arrow-right me-2"></i>Start Prediction
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4 mb-4">
+                <div class="card prediction-card">
+                    <div class="card-body">
+                        <span class="coming-soon">Coming Soon</span>
+                        <div class="prediction-icon">
+                            <i class="fas fa-child"></i>
+                        </div>
+                        <h4>Pediatric Appendicitis</h4>
+                        <p>Assess pediatric appendicitis risk based on patient symptoms and diagnostic results.</p>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-secondary btn-predict" disabled>
+                            <i class="fas fa-clock me-2"></i>Coming Soon
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4 mb-4">
+                <div class="card prediction-card">
+                    <div class="card-body">
+                        <span class="coming-soon">Coming Soon</span>
+                        <div class="prediction-icon">
+                            <i class="fas fa-procedures"></i>
+                        </div>
+                        <h4>Bone Marrow Transplants</h4>
+                        <p>Evaluate bone marrow transplant risk based on patient vitals and medical history.</p>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-secondary btn-predict" disabled>
+                            <i class="fas fa-clock me-2"></i>Coming Soon
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4 mb-4">
+                <div class="card prediction-card">
+                    <div class="card-body">
+                        <span class="coming-soon">Coming Soon</span>
+                        <div class="prediction-icon">
+                            <i class="fas fa-venus"></i>
+                        </div>
+                        <h4>Cervical Cancer</h4>
+                        <p>Predict cervical cancer risk based on patient symptoms and diagnostic results.</p>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-secondary btn-predict" disabled>
+                            <i class="fas fa-clock me-2"></i>Coming Soon
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4 mb-4">
+                <div class="card prediction-card">
+                    <div class="card-body">
+                        <span class="coming-soon">Coming Soon</span>
+                        <div class="prediction-icon">
+                            <i class="fas fa-weight"></i>
+                        </div>
+                        <h4>Obesity Risk</h4>
+                        <p>Assess obesity risk based on patient vitals and medical history.</p>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-secondary btn-predict" disabled>
+                            <i class="fas fa-clock me-2"></i>Coming Soon
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Sidebar toggle functionality
+        document.getElementById('sidebar-toggle').addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('active');
+            document.getElementById('main-content').classList.toggle('active');
+        });
+
+        // Add animation to cards
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.card');
+            cards.forEach((card, index) => {
+                card.style.animation = `fadeIn 0.5s ease-in-out ${index * 0.1}s forwards`;
+                card.style.opacity = '0';
+            });
+        });
+    </script>
+</body>
+</html>
